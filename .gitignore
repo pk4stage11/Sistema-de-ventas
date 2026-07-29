@@ -1,0 +1,29 @@
+# Next.js
+.next/
+out/
+build/
+
+# Dependencias
+node_modules/
+
+# Entorno y secretos
+.env
+.env.local
+.env.*.local
+
+# Supabase CLI
+supabase/.branches/
+supabase/.temp/
+
+# Tests y cobertura
+coverage/
+*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+npm-debug.log*

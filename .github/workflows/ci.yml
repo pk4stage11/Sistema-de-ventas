@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificacion:
+    name: Lint, typecheck y tests unitarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Formato (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Chequeo de tipos
+        run: npm run typecheck
+
+      - name: Tests unitarios
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Valores dummy: el build no debe requerir secretos reales porque
+          # env.ts valida de forma perezosa, pero se documentan por si algún
+          # componente los referencia en build time.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
