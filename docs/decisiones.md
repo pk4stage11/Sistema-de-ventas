@@ -141,6 +141,37 @@ una plataforma **vertical inmobiliaria** con dos diferencias de fondo:
   existe un `package-lock.json` fuera de esta carpeta (en el perfil de
   Windows del usuario) que Next detectaba como posible raíz de workspace.
 
+### Verificación contra el proyecto Supabase Cloud real (2026-08-01)
+
+Proyecto creado por el usuario: `dgqjaqecnlhvqjgavbvw` (`us-west-2`,
+Postgres 17.6). Sin MCP de Supabase disponible en este entorno, se conectó
+directamente con la Management API (`https://api.supabase.com`) usando un
+token de acceso personal que el usuario pasó por chat — token de **cuenta
+completa**, no acotado a este proyecto; se le recomendó rotarlo/revocarlo
+después de esta sesión porque quedó en texto plano en la conversación.
+
+- `supabase link --project-ref dgqjaqecnlhvqjgavbvw` + `supabase db push`:
+  **las 10 migraciones de la Fase 1 aplicaron limpio, primera vez**, sin
+  necesidad de contraseña de base de datos interactiva. Sin Docker
+  instalado, el CLI avisa que no pudo cachear el catálogo de migraciones
+  para `db diff` — no bloquea el push, solo limita esa funcionalidad
+  específica.
+- **Bug real encontrado y corregido:** `scripts/seed.ts` y
+  `tests/db/setup.ts` usaban `import 'dotenv/config'`, que por defecto solo
+  carga un archivo llamado `.env` — `.env.local` es una convención de
+  Next.js que el paquete `dotenv` no conoce. Con eso, `npm run db:seed`
+  fallaba pidiendo credenciales aunque `.env.local` existiera y estuviera
+  bien formado. Se corrigió a `config({ path: '.env.local' })` explícito en
+  ambos archivos.
+- `npm run db:seed`: creó la organización, el proyecto ("Edificio Vista
+  Mar") y las 20 unidades sin errores.
+- `npm run test:db`: **5/5 tests pasan** contra la base real — aislamiento
+  por organización, bloqueo de aprobación de reserva para rol `asesor`,
+  aprobación exitosa para rol `admin`, y bloqueo de auto-promoción de rol.
+
+Con esto, la Fase 1 queda verificada de punta a punta, no solo revisada
+manualmente.
+
 ## Identidad visual — adopción del sistema de diseño InteresArte
 
 El usuario indicó (2026-07-31) construir la Bandeja siguiendo el mockup

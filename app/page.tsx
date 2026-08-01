@@ -1,6 +1,6 @@
 const fases = [
   { id: 'Fase 0', titulo: 'Scaffolding y tooling', estado: 'listo' },
-  { id: 'Fase 1', titulo: 'Esquema de datos, RLS y seed', estado: 'pendiente' },
+  { id: 'Fase 1', titulo: 'Esquema de datos, RLS y seed', estado: 'listo' },
   { id: 'Fase 2', titulo: 'Ingesta WhatsApp + landing y cola', estado: 'pendiente' },
   { id: 'Fase 3', titulo: 'Bandeja unificada con Realtime', estado: 'pendiente' },
   { id: 'Fase 4', titulo: 'Agente con tool use y RAG', estado: 'pendiente' },

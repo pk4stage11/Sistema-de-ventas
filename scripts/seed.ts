@@ -6,7 +6,10 @@
  *
  * Uso: npm run db:seed
  */
-import 'dotenv/config';
+// `dotenv/config` por defecto solo carga `.env`; este proyecto sigue la
+// convención de Next.js y usa `.env.local`, así que hay que indicarlo.
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { Database } from '@/lib/supabase/database.types';
 
