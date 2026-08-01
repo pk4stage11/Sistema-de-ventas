@@ -20,16 +20,16 @@ una plataforma **vertical inmobiliaria** con dos diferencias de fondo:
 
 ## Decisiones confirmadas (fase de planificación)
 
-| Decisión                   | Elegido                                                                                                                      | Por qué / trade-off                                                                                                                                                                                                                                                                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Multi-inquilino            | Tabla `organizations` + `org_id` en todas las tablas y RLS por organización, operando con **una sola** organización          | Costo casi nulo ahora; evita una migración dolorosa si algún día se necesita multi-inquilino real. No hay onboarding de orgs ni invitaciones todavía.                                                                                                                                                                                               |
-| Cola / background          | **Vercel Cron + drenador** (`FOR UPDATE SKIP LOCKED`), con disparo inmediato tras el webhook                                 | Cero infraestructura nueva, testeable localmente. Si el volumen lo exige, el mismo código puede correr como worker Node de larga duración en el VPS Hostinger existente (Fase 7) sin cambiar la lógica.                                                                                                                                             |
-| Canales en Fase 2          | WhatsApp + landing; Messenger e Instagram en Fase 5                                                                          | Evita bloquear el avance en la revisión de app de Meta para `instagram_manage_messages`, que puede tardar semanas. Los adaptadores se escriben contra el modelo normalizado desde el inicio.                                                                                                                                                        |
-| Entorno Supabase           | Proyecto Supabase Cloud de desarrollo (no local con Docker)                                                                  | Migraciones vía `supabase db push` contra el remoto. Los tests de RLS y concurrencia pegan a la red — se aíslan en `npm run test:db`, aparte de los unitarios, para no frenar la iteración normal.                                                                                                                                                  |
-| Objetivo del agente        | **La cita agendada en Google Calendar** es el cierre del agente de IA                                                        | Cambia la máquina de estados: el agente llega hasta `cita_agendada`; la visita, la propuesta y la reserva son 100% humanas, gestionadas en la bandeja. Es también la métrica de conversión principal del dashboard.                                                                                                                                 |
-| Google Calendar            | Un solo calendario compartido de la empresa ("Visitas"), una cuenta conectada por OAuth; el asesor asignado va como invitado | Simple, sin depender de que cada asesor autorice individualmente. Trade-off aceptado: el sistema no ve la agenda personal de cada asesor, así que un choque con un evento privado suyo es posible en teoría; se mitiga con el horario de atención configurable (`availability_rules`). Migrar a OAuth por asesor después solo toca `lib/calendar/`. |
-| Disponibilidad de horarios | Slots reales vía `freebusy` del calendario compartido, cruzados con `availability_rules`                                     | El agente solo ofrece 2-3 huecos concretos y nunca uno ya ocupado.                                                                                                                                                                                                                                                                                  |
-| Reserva de unidad          | Se mantiene, pero **post-visita**                                                                                            | Máquina de estados: `nuevo → calificando → calificado → cita_agendada → visita_realizada → propuesta_enviada → reserva_pendiente → cerrado_ganado / cerrado_perdido / derivado_humano`, más `cita_no_asistida` y `cita_reprogramada`.                                                                                                               |
+| Decisión                   | Elegido                                                                                                                      | Por qué / trade-off                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Multi-inquilino            | Tabla `organizations` + `org_id` en todas las tablas y RLS por organización, operando con **una sola** organización          | Costo casi nulo ahora; evita una migración dolorosa si algún día se necesita multi-inquilino real. No hay onboarding de orgs ni invitaciones todavía.                                                                                                                                                                                                                                                                            |
+| Cola / background          | **Vercel Cron + drenador** (`FOR UPDATE SKIP LOCKED`), con disparo inmediato tras el webhook                                 | Cero infraestructura nueva, testeable localmente. Si el volumen lo exige, el mismo código puede correr como worker Node de larga duración en el VPS Hostinger existente (Fase 7) sin cambiar la lógica.                                                                                                                                                                                                                          |
+| Canales activos            | Solo WhatsApp + landing, **indefinidamente por ahora** (Messenger/Instagram diferidos)                                       | Decisión explícita del usuario (2026-07-31): "dejemos lo de Meta [Messenger/Instagram] por el momento, solo usemos WhatsApp". La Fase 5 pierde ese alcance — queda solo handoff + plantillas de WhatsApp. `lib/channels/types.ts` conserva `messenger`/`instagram` en el tipo `Canal` (no cuesta nada dejarlos) pero no se construyen sus adaptadores ni se tramita la revisión de app de Meta hasta que se pida explícitamente. |
+| Entorno Supabase           | Proyecto Supabase Cloud de desarrollo (no local con Docker)                                                                  | Migraciones vía `supabase db push` contra el remoto. Los tests de RLS y concurrencia pegan a la red — se aíslan en `npm run test:db`, aparte de los unitarios, para no frenar la iteración normal.                                                                                                                                                                                                                               |
+| Objetivo del agente        | **La cita agendada en Google Calendar** es el cierre del agente de IA                                                        | Cambia la máquina de estados: el agente llega hasta `cita_agendada`; la visita, la propuesta y la reserva son 100% humanas, gestionadas en la bandeja. Es también la métrica de conversión principal del dashboard.                                                                                                                                                                                                              |
+| Google Calendar            | Un solo calendario compartido de la empresa ("Visitas"), una cuenta conectada por OAuth; el asesor asignado va como invitado | Simple, sin depender de que cada asesor autorice individualmente. Trade-off aceptado: el sistema no ve la agenda personal de cada asesor, así que un choque con un evento privado suyo es posible en teoría; se mitiga con el horario de atención configurable (`availability_rules`). Migrar a OAuth por asesor después solo toca `lib/calendar/`.                                                                              |
+| Disponibilidad de horarios | Slots reales vía `freebusy` del calendario compartido, cruzados con `availability_rules`                                     | El agente solo ofrece 2-3 huecos concretos y nunca uno ya ocupado.                                                                                                                                                                                                                                                                                                                                                               |
+| Reserva de unidad          | Se mantiene, pero **post-visita**                                                                                            | Máquina de estados: `nuevo → calificando → calificado → cita_agendada → visita_realizada → propuesta_enviada → reserva_pendiente → cerrado_ganado / cerrado_perdido / derivado_humano`, más `cita_no_asistida` y `cita_reprogramada`.                                                                                                                                                                                            |
 
 ## Restricciones técnicas asumidas (no son workarounds)
 
@@ -140,3 +140,47 @@ una plataforma **vertical inmobiliaria** con dos diferencias de fondo:
 - **`turbopack.root`** se fijó explícitamente en `next.config.ts` porque
   existe un `package-lock.json` fuera de esta carpeta (en el perfil de
   Windows del usuario) que Next detectaba como posible raíz de workspace.
+
+## Identidad visual — adopción del sistema de diseño InteresArte
+
+El usuario indicó (2026-07-31) construir la Bandeja siguiendo el mockup
+`docs/mockups/10-admin-leads.html` del proyecto **"Inmobiliaria"**
+(`C:\Users\crist\Documents\Claude Projects\Inmobiliaria`), que junto con
+`_base.css` y `07-admin-dashboard.html` en esa misma carpeta define la
+identidad de marca real del negocio: **InteresArte**. Esto reemplaza la
+paleta placeholder "verde pizarra/ámbar" inventada en la Fase 0
+(`app/globals.css` nunca había salido de este repo, así que no hay nada que
+migrar).
+
+- **Tipografía:** Fraunces (serif, títulos/cifras) + Inter (sans, cuerpo),
+  cargadas con `next/font/google` (self-hosted, sin FOUC) en vez del
+  `@import` de Google Fonts que usa el mockup estático.
+- **Color:** teal `#14919B` (marca-500) / `#2BC5CE` (marca-400, acento
+  brillante), shell de administración con sidebar `#0E0E0E` fijo. **No** es
+  un tema claro/oscuro conmutable — el diseño de referencia no tiene
+  variante oscura del panel de contenido, así que no se inventó una (a
+  diferencia del enfoque `prefers-color-scheme` de la Fase 0).
+- **Iconos:** se evaluó `@tabler/icons-webfont` (el que usa el mockup
+  estático) pero son ~127 MB sin tree-shaking; se usó `@tabler/icons-react`
+  en su lugar (mismo set de iconos, componentes React, solo se empaquetan
+  los que se importan). Se quitó `lucide-react` de la Fase 0, que había
+  quedado sin usar — evita mantener dos librerías de iconos.
+- **Componentes propios en vez de shadcn/ui todavía:** `components/ui/chip.tsx`
+  y `badge.tsx` son bespoke, no de shadcn. El stack del plan original dice
+  "Tailwind + shadcn/ui", pero para esta primera pantalla (chips de filtro,
+  pills de estado/canal) shadcn no aporta nada que no sea más rápido
+  escribir a mano sobre esta marca específica; se instala cuando haga falta
+  un primitivo más complejo (diálogos, dropdowns).
+- **Bandeja construida antes de tiempo respecto al plan de fases:** el plan
+  original ubica la Bandeja en la Fase 3 (con Realtime) y pide no avanzar
+  de fase sin revisión. Esta primera versión (`app/(app)/inbox/`) usa datos
+  de muestra (`mock-data.ts`) y replica el layout de `10-admin-leads.html`
+  — lista de consultas con chips de filtro, no todavía el layout de 3
+  columnas con hilo de conversación que describe el plan de la Fase 3. Se
+  construyó ahora porque no depende del backend y el usuario lo pidió
+  explícitamente mientras el resto de la Fase 1 sigue bloqueado en
+  credenciales de Supabase. **Pendiente:** validar visualmente en un
+  navegador real (el screenshot automático falló porque el panel del
+  navegador no estaba visible en el cliente del usuario; se verificó por
+  accesibilidad, texto renderizado, red y consola) y revisar el
+  comportamiento responsive del sidebar en móvil, que todavía no colapsa.

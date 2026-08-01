@@ -1,85 +1,60 @@
 @import 'tailwindcss';
 
 /*
- * Identidad visual de la plataforma.
- * Paleta propia (no la plantilla por defecto de shadcn): un verde pizarra
- * profundo como color de marca, con un ámbar cálido para acentos y avisos.
- * Densidad alta: los asesores revisan muchas conversaciones por sesión.
+ * Identidad visual: InteresArte.
+ * Tomada de los mockups de referencia del negocio
+ * (docs/mockups/_base.css y 07-admin-dashboard.html / 10-admin-leads.html
+ * en el proyecto "Inmobiliaria"): tipografía Fraunces (serif, títulos y
+ * cifras) + Inter (sans, cuerpo), acento teal, shell de administración con
+ * sidebar oscuro fijo. No es un tema claro/oscuro conmutable — el diseño
+ * de referencia no tiene variante oscura del panel de contenido, así que
+ * no se inventa una.
  */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
   /* Marca */
-  --color-marca-50: oklch(0.97 0.02 174);
-  --color-marca-100: oklch(0.94 0.04 174);
-  --color-marca-200: oklch(0.87 0.07 174);
-  --color-marca-300: oklch(0.78 0.1 174);
-  --color-marca-400: oklch(0.68 0.11 174);
-  --color-marca-500: oklch(0.58 0.11 174);
-  --color-marca-600: oklch(0.48 0.09 174);
-  --color-marca-700: oklch(0.39 0.07 174);
-  --color-marca-800: oklch(0.31 0.05 174);
-  --color-marca-900: oklch(0.24 0.04 174);
-  --color-marca-950: oklch(0.17 0.03 174);
+  --color-marca-50: #e7f5f6;
+  --color-marca-100: #d3edef;
+  --color-marca-400: #2bc5ce; /* acento brillante: iconos activos, chips destacados */
+  --color-marca-500: #14919b; /* teal principal */
+  --color-marca-600: #0b6970;
+  --color-marca-700: #04333a;
 
-  /* Acento cálido: avisos, ventana de 24 h por expirar, badges de IA */
-  --color-acento-100: oklch(0.95 0.05 75);
-  --color-acento-300: oklch(0.85 0.12 75);
-  --color-acento-500: oklch(0.72 0.16 75);
-  --color-acento-700: oklch(0.55 0.13 75);
+  /* Superficies oscuras del shell de administración (sidebar) */
+  --color-tinta-950: #0e0e0e;
+  --color-tinta-900: #1c1c1c;
 
-  /* Semánticos de estado del lead */
-  --color-exito-500: oklch(0.65 0.16 150);
-  --color-alerta-500: oklch(0.75 0.17 85);
-  --color-peligro-500: oklch(0.6 0.2 25);
+  /* Superficies claras del contenido */
+  --color-fondo: #f7f8f6;
+  --color-borde: #ececea;
 
-  --radius-panel: 0.75rem;
-}
+  /* WhatsApp: el color de marca de Meta, solo para el badge/botón de ese canal */
+  --color-whatsapp: #25d366;
+  --color-whatsapp-badge-bg: #dff6e6;
+  --color-whatsapp-badge-texto: #16803c;
 
-/* Tokens de superficie, sensibles al tema claro/oscuro */
-:root {
-  --fondo: oklch(0.99 0.002 174);
-  --fondo-panel: oklch(1 0 0);
-  --fondo-sutil: oklch(0.97 0.004 174);
-  --borde: oklch(0.91 0.005 174);
-  --texto: oklch(0.23 0.02 174);
-  --texto-sutil: oklch(0.52 0.015 174);
-}
+  /* Landing/formulario */
+  --color-form-badge-bg: #ededf7;
+  --color-form-badge-texto: #3c3489;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: oklch(0.18 0.012 174);
-    --fondo-panel: oklch(0.22 0.014 174);
-    --fondo-sutil: oklch(0.25 0.014 174);
-    --borde: oklch(0.31 0.016 174);
-    --texto: oklch(0.96 0.004 174);
-    --texto-sutil: oklch(0.72 0.012 174);
-  }
-}
+  --color-exito: #16a34a;
+  --color-texto: #0e0e0e;
+  --color-texto-sutil: #777777;
+  --color-texto-tenue: #999999;
 
-@theme inline {
-  --color-fondo: var(--fondo);
-  --color-panel: var(--fondo-panel);
-  --color-sutil: var(--fondo-sutil);
-  --color-borde: var(--borde);
-  --color-texto: var(--texto);
-  --color-texto-sutil: var(--texto-sutil);
+  --radius-panel: 14px;
+  --radius-pill: 999px;
 }
 
 @layer base {
-  * {
-    border-color: var(--borde);
-  }
-
   body {
-    background-color: var(--fondo);
-    color: var(--texto);
-    font-family: var(--font-sans);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
     -webkit-font-smoothing: antialiased;
   }
 
-  /* El foco visible es obligatorio: la bandeja se navega mucho con teclado. */
   :focus-visible {
     outline: 2px solid var(--color-marca-500);
     outline-offset: 2px;

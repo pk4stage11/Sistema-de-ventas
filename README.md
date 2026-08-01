@@ -1,11 +1,12 @@
 # Plataforma de Agentes IA — Inmobiliaria
 
 Agentes conversacionales de IA que atienden leads de una inmobiliaria peruana
-por WhatsApp, Messenger, Instagram Direct y formularios de landing page, los
-califican, y los llevan hasta **una visita agendada en Google Calendar con un
-asesor**. De ahí en adelante el proceso lo lleva un humano en una bandeja
-unificada: la visita, la propuesta comercial y la solicitud de reserva se
-revisan y cierran ahí.
+por WhatsApp y formularios de landing page (Messenger e Instagram Direct
+quedan diferidos por ahora, ver [`docs/decisiones.md`](docs/decisiones.md)),
+los califican, y los llevan hasta **una visita agendada en Google Calendar
+con un asesor**. De ahí en adelante el proceso lo lleva un humano en una
+bandeja unificada: la visita, la propuesta comercial y la solicitud de
+reserva se revisan y cierran ahí.
 
 > El plan de fases y las decisiones de arquitectura completas están en
 > [`docs/decisiones.md`](docs/decisiones.md). Este README cubre arquitectura,
@@ -19,7 +20,7 @@ revisan y cierran ahí.
 | Backend                 | Rutas API de Next.js, runtime **Node** (no Edge) — necesario para verificar firmas HMAC y usar librerías nativas |
 | Datos / Auth / Realtime | Supabase: Postgres, Row Level Security, Auth, Realtime, Storage, `pgvector`                                      |
 | IA                      | SDK de Anthropic (Claude), tool use, prompts versionados en `lib/agent/`                                         |
-| Canales                 | WhatsApp Cloud API, Messenger e Instagram vía Meta Graph API                                                     |
+| Canales                 | WhatsApp Cloud API (activo). Messenger e Instagram vía Meta Graph API: diferidos                                 |
 | Agenda                  | Google Calendar API (una cuenta de la empresa)                                                                   |
 
 No hay capa de orquestación externa (n8n ni similar): los webhooks, la cola y
@@ -28,7 +29,7 @@ el agente viven en el propio proyecto Next.js, versionados en este repo.
 ## Arquitectura y flujo de un mensaje entrante
 
 ```
-Canales (WhatsApp / Messenger / Instagram / Landing)
+Canales activos: WhatsApp / Landing   (Messenger / Instagram: diferidos)
    │  webhook (GET hub.challenge  +  POST con X-Hub-Signature-256)
    ▼
 /api/webhooks/meta/[platform]   → verifica firma → normaliza → encola → 200
@@ -72,7 +73,7 @@ app/
   api/leads/inbound/route.ts
   api/cron/drain/route.ts
 lib/
-  channels/       adaptadores por canal + normalize.ts (→ InboundMessage único)
+  channels/       adaptadores por canal (whatsapp, landing; messenger/instagram diferidos) + normalize.ts
   queue/          enqueue.ts / drain.ts
   agent/          prompt.ts (única fuente del system prompt), tools/*.ts, state-machine.ts
   calendar/       google.ts (freebusy/eventos), slots.ts (lógica pura, sin red)
