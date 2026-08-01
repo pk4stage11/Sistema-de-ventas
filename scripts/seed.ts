@@ -10,6 +10,7 @@
 // convención de Next.js y usa `.env.local`, así que hay que indicarlo.
 import { config } from 'dotenv';
 config({ path: '.env.local' });
+import { randomBytes } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { Database } from '@/lib/supabase/database.types';
 
@@ -17,6 +18,8 @@ type UnidadInsert = Database['public']['Tables']['units']['Insert'];
 
 const NOMBRE_ORGANIZACION = 'Inmobiliaria Costa Perú SAC';
 const NOMBRE_PROYECTO = 'Edificio Vista Mar';
+const EMAIL_ADMIN = process.env.SEED_ADMIN_EMAIL ?? 'admin@interesarte.pe';
+const NOMBRE_ADMIN = process.env.SEED_ADMIN_NOMBRE ?? 'Cristhian Alayo';
 
 const TIPOLOGIAS = [
   { tipologia: 'Flat 1 dormitorio', dormitorios: 1, banos: 1, m2: 45 },
@@ -88,6 +91,47 @@ async function obtenerOCrearProyecto(
   return creado.id;
 }
 
+/**
+ * Crea un usuario admin real (auth.users + public.users) para poder
+ * iniciar sesión de verdad en la app. Si ya existe, no hace nada — la
+ * contraseña solo se muestra la primera vez; si se perdió, se resetea
+ * desde el dashboard de Supabase (Authentication → Users).
+ */
+async function obtenerOCrearAdmin(
+  db: ReturnType<typeof supabaseAdmin>,
+  orgId: string,
+): Promise<void> {
+  const password = randomBytes(9).toString('base64url');
+
+  const { data: creado, error: errorCreacion } = await db.auth.admin.createUser({
+    email: EMAIL_ADMIN,
+    password,
+    email_confirm: true,
+  });
+
+  if (errorCreacion) {
+    if (errorCreacion.code === 'email_exists') {
+      console.log(
+        `Admin: ${EMAIL_ADMIN} ya existe, no se recrea (si perdiste la contraseña, resetéala desde el dashboard de Supabase).`,
+      );
+      return;
+    }
+    throw errorCreacion;
+  }
+  if (!creado.user) throw new Error('No se pudo crear el usuario admin');
+
+  const { error: errorPerfil } = await db.from('users').insert({
+    id: creado.user.id,
+    org_id: orgId,
+    full_name: NOMBRE_ADMIN,
+    role: 'admin',
+  });
+  if (errorPerfil) throw errorPerfil;
+
+  console.log(`Admin creado: ${EMAIL_ADMIN}`);
+  console.log(`  contraseña: ${password}  (guárdala — no se vuelve a mostrar)`);
+}
+
 function generarUnidades(orgId: string, projectId: string): UnidadInsert[] {
   const unidades: UnidadInsert[] = [];
 
@@ -127,6 +171,8 @@ async function main() {
   console.log(`Proyecto: ${NOMBRE_PROYECTO}`);
   const projectId = await obtenerOCrearProyecto(db, orgId);
   console.log(`  id = ${projectId}`);
+
+  await obtenerOCrearAdmin(db, orgId);
 
   const unidades = generarUnidades(orgId, projectId);
   const { data: unidadesGuardadas, error: errorUnidades } = await db

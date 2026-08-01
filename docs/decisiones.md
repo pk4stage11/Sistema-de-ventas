@@ -316,3 +316,78 @@ LOCKED` desde el cliente (cada request de supabase-js es su propia
   el correcto) probados igual. 26 tests unitarios + 8 tests de `test:db`
   (5 de RLS de la Fase 1 + 3 nuevos de idempotencia de ingesta), todos
   pasando.
+
+## Fase 3 — Notas de implementación
+
+- **La autenticación no estaba planificada como su propia fase, pero era un
+  prerequisito real, no opcional.** Realtime + RLS necesitan una sesión de
+  usuario auténtica — un asesor solo recibe eventos de su propia
+  organización porque `postgres_changes` respeta las mismas políticas RLS
+  que las queries normales, evaluadas contra el JWT de quien está
+  conectado. Sin login no había forma honesta de mostrar datos reales (la
+  alternativa habría sido usar `service_role` desde el navegador, que es
+  exactamente lo que la Fase 1 prohíbe). Se construyó lo mínimo: login por
+  email/contraseña con `@supabase/ssr` (`lib/supabase/server.ts` para
+  Server Components/Actions, `lib/supabase/client.ts` para el navegador,
+  `proxy.ts` para refrescar la sesión y proteger rutas), logout, y un
+  usuario admin real creado por `scripts/seed.ts`
+  (`admin@interesarte.pe`, contraseña generada e impresa una sola vez). No
+  hay registro propio ni recuperación de contraseña — los asesores los da
+  de alta un admin, como dice el plan original.
+- **`middleware.ts` → `proxy.ts`.** Next 16 renombró la convención (el
+  archivo sigue funcionando con el nombre viejo, pero con un warning de
+  deprecación); además la función exportada tiene que llamarse `proxy`
+  (o ser el export default), no `middleware`.
+- **Bug real encontrado: `envPublic()` no funcionaba en el navegador.**
+  El refactor de la Fase 1 que dividió `lib/env.ts` en validadores por
+  área cambió `envPublic()` para usar el mismo helper genérico
+  `parsear(schema, process.env)` que las funciones server-only. Eso rompe
+  en el cliente: Next.js solo puede inlinear `NEXT_PUBLIC_*` en el bundle
+  del navegador cuando la lectura es una expresión estática literal
+  (`process.env.NEXT_PUBLIC_X`) reconocible por su compilador — pasarle el
+  objeto `process.env` completo a Zod en runtime no lo es, y en el
+  navegador ese objeto ni siquiera existe de verdad. El bug no se había
+  manifestado hasta ahora porque ningún Client Component había llamado
+  `envPublic()` antes (recién con `lib/supabase/client.ts`, que hace falta
+  para las suscripciones de Realtime). Se revirtió `envPublic()` a acceso
+  estático explícito por variable; las demás funciones de `env.ts`
+  (todas server-only) están bien como están.
+- **`conversation_list` — vista nueva** (migración `20260801030000`):
+  PostgREST no soporta "el último N por grupo" en un solo `select` con
+  embeds, así que se resuelve con `distinct on` en una vista. A diferencia
+  de `calendar_connection_status` (que necesita `security_invoker=false`
+  porque la tabla base está completamente cerrada), esta va con
+  `security_invoker=true` a propósito: debe respetar el RLS normal de
+  quien la consulta, igual que si hiciera la query a las tablas directo.
+- **Embeds de PostgREST evitados en el código de la app.** Con
+  `Relationships: []` en todo `database.types.ts` (no hay codegen real
+  todavía, ver nota de la Fase 1), una sintaxis como
+  `.select('estado, projects(name)')` no tipa de forma confiable. El panel
+  del lead hace dos queries simples en cascada en vez de un embed.
+- **Suscripción única por organización, no por conversación.** Un solo
+  canal de Realtime (`postgres_changes` en `messages`, filtrado por
+  `org_id`) alimenta tanto el hilo abierto como la lista completa —
+  evita mantener N suscripciones activas. El valor de la conversación
+  seleccionada se lee de un `ref` (no del estado) dentro del callback,
+  porque la suscripción vive todo el ciclo de vida del componente y no se
+  vuelve a crear cada vez que el asesor cambia de conversación.
+- **`react-hooks/set-state-in-effect`** (regla nueva del plugin de
+  ESLint): marcó `setState` síncrono en la rama de retorno anticipado de
+  un efecto (limpiar estado cuando la dependencia pasa a `null`). Se
+  resolvió envolviendo la lógica del efecto en un IIFE async — el patrón
+  correcto de todos modos para efectos con lógica asíncrona — en vez de
+  desactivar la regla.
+- **Fase 3 es de solo lectura, como pide el plan**: no hay forma de
+  responder desde la bandeja todavía (se avisa explícitamente en el hilo).
+  Catálogo y Agenda siguen con datos de muestra — no se tocaron en esta
+  fase.
+- **Verificación real, no solo el criterio mínimo del plan.** Se hizo la
+  verificación pedida explícitamente (insertar un mensaje por SQL directo
+  y verlo aparecer sin recargar — funcionó) más un flujo completo con
+  Playwright-en-navegador real: login con el admin real, navegación
+  protegida por `proxy.ts` (redirige a `/login` sin sesión), datos reales
+  de la Fase 2 visibles en la bandeja (incluida la conversación de
+  WhatsApp simulada y los envíos de landing), badge de ventana de 24h de
+  WhatsApp calculado correctamente, panel del lead mostrando "todavía no
+  lo calificó el agente de IA" (correcto — el agente no existe hasta la
+  Fase 4), y logout. Sin errores de consola en ningún paso.

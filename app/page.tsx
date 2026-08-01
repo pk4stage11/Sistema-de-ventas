@@ -2,7 +2,7 @@ const fases = [
   { id: 'Fase 0', titulo: 'Scaffolding y tooling', estado: 'listo' },
   { id: 'Fase 1', titulo: 'Esquema de datos, RLS y seed', estado: 'listo' },
   { id: 'Fase 2', titulo: 'Ingesta WhatsApp + landing y cola', estado: 'listo' },
-  { id: 'Fase 3', titulo: 'Bandeja unificada con Realtime', estado: 'pendiente' },
+  { id: 'Fase 3', titulo: 'Bandeja unificada con Realtime', estado: 'listo' },
   { id: 'Fase 4', titulo: 'Agente con tool use y RAG', estado: 'pendiente' },
   { id: 'Fase 4.5', titulo: 'Agenda y Google Calendar', estado: 'pendiente' },
   { id: 'Fase 5', titulo: 'Handoff y plantillas de WhatsApp', estado: 'pendiente' },
@@ -51,11 +51,11 @@ export default function Home() {
       </section>
 
       <p className="text-texto-tenue mt-8 text-xs">
-        Vistas previas (datos de muestra):{' '}
         <a href="/inbox" className="text-marca-600 underline underline-offset-2">
           /inbox
-        </a>
-        {' · '}
+        </a>{' '}
+        ya muestra datos reales (requiere iniciar sesión). Catálogo y Agenda siguen con
+        datos de muestra:{' '}
         <a href="/catalogo" className="text-marca-600 underline underline-offset-2">
           /catalogo
         </a>

@@ -100,8 +100,16 @@ tests/{unit,contract/fixtures,db}
 npm install
 cp .env.example .env.local
 # completa .env.local con tus credenciales — ver comentarios en el propio archivo
+npm run db:push
+npm run db:seed
 npm run dev
 ```
+
+`npm run db:seed` crea, además del catálogo de muestra, un usuario admin
+real (`admin@interesarte.pe` por defecto — configurable con
+`SEED_ADMIN_EMAIL`) con una contraseña generada que se imprime **una sola
+vez** en la consola: es lo que necesitas para entrar en `/login`. La
+bandeja (`/inbox`) y el resto de `(app)` requieren sesión.
 
 Comandos principales:
 
@@ -114,7 +122,8 @@ npm run typecheck      # tsc --noEmit
 npm run test            # tests unitarios (rápidos, sin red) — corre en CI
 npm run test:db          # tests contra Supabase Cloud de desarrollo (RLS, concurrencia)
 npm run db:push            # aplica migraciones al proyecto Supabase
-npm run db:seed              # carga el seed (inmobiliaria ficticia + unidades)
+npm run db:seed              # carga el seed (inmobiliaria ficticia + unidades + admin)
+npm run simulate:webhook       # simula un mensaje de WhatsApp firmado, sin depender de Meta
 ```
 
 ## Estado del proyecto

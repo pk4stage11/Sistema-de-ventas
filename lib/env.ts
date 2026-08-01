@@ -85,9 +85,25 @@ function parsear<T extends z.ZodTypeAny>(
   return parsed.data;
 }
 
-/** Variables públicas. Seguras de usar en el cliente. */
+/**
+ * Variables públicas. Seguras de usar en el cliente.
+ *
+ * A propósito NO usa el helper `parsear()` con `process.env` completo:
+ * Next.js solo puede inlinear `NEXT_PUBLIC_*` en el bundle del navegador
+ * cuando el acceso es una expresión estática literal
+ * (`process.env.NEXT_PUBLIC_X`) que su compilador puede reconocer en el
+ * código fuente. Pasarle el objeto `process.env` completo a Zod en
+ * runtime (como hacen las demás funciones de este archivo, todas
+ * server-only) no es estático — en el cliente `process.env` ni siquiera
+ * existe como objeto real, así que esas variables llegarían `undefined`.
+ */
 export function envPublic(): EnvPublic {
-  return parsear(publicSchema, process.env);
+  const parsed = publicSchema.safeParse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  });
+  if (!parsed.success) throw new Error(formatearError(parsed.error));
+  return parsed.data;
 }
 
 /** Credenciales de Supabase para el cliente admin (service_role). */

@@ -671,6 +671,38 @@ export interface Database {
         };
         Relationships: [];
       };
+      conversation_list: {
+        Row: {
+          id: string;
+          org_id: string;
+          contact_id: string;
+          channel_id: string;
+          assigned_user_id: string | null;
+          ia_activa: boolean;
+          estado: 'abierta' | 'cerrada';
+          last_message_at: string | null;
+          channel_type: 'whatsapp' | 'messenger' | 'instagram' | 'landing';
+          contact_nombre: string | null;
+          contact_telefono: string | null;
+          contact_email: string | null;
+          ultimo_mensaje_texto: string | null;
+          ultimo_mensaje_direccion: 'entrante' | 'saliente' | null;
+          ultimo_mensaje_tipo:
+            | 'texto'
+            | 'imagen'
+            | 'audio'
+            | 'video'
+            | 'documento'
+            | 'ubicacion'
+            | 'contacto'
+            | 'sticker'
+            | 'sistema'
+            | 'no_soportado'
+            | null;
+          ultimo_mensaje_timestamp: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       dequeue_jobs: {

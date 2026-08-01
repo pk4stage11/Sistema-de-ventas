@@ -7,22 +7,34 @@ import {
   IconCalendarEvent,
   IconClipboardCheck,
   IconLayoutDashboard,
+  IconLogout,
   IconMessages,
   IconSettings,
 } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/logo';
+import { logout } from '@/app/login/actions';
 
 const NAV = [
   { href: '/dashboard', label: 'Inicio', icon: IconLayoutDashboard },
   { href: '/catalogo', label: 'Catálogo', icon: IconBuildingCommunity },
-  { href: '/inbox', label: 'Bandeja', icon: IconMessages, badge: 5 },
+  { href: '/inbox', label: 'Bandeja', icon: IconMessages },
   { href: '/agenda', label: 'Agenda', icon: IconCalendarEvent },
   { href: '/reservas', label: 'Reservas', icon: IconClipboardCheck },
   { href: '/ajustes', label: 'Ajustes', icon: IconSettings },
 ] as const;
 
-export function Sidebar() {
+const ROL_LEGIBLE: Record<string, string> = {
+  admin: 'Administrador',
+  asesor: 'Asesor',
+  supervisor: 'Supervisor',
+};
+
+interface SidebarProps {
+  usuario: { nombre: string; rol: string; iniciales: string };
+}
+
+export function Sidebar({ usuario }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -32,9 +44,8 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-0.5">
-        {NAV.map(({ href, label, icon: Icon, ...item }) => {
+        {NAV.map(({ href, label, icon: Icon }) => {
           const activo = pathname.startsWith(href);
-          const badge = 'badge' in item ? item.badge : undefined;
           return (
             <Link
               key={href}
@@ -46,11 +57,6 @@ export function Sidebar() {
             >
               <Icon size={18} className={activo ? 'text-marca-400' : undefined} />
               {label}
-              {badge ? (
-                <span className="bg-marca-500 ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold text-white">
-                  {badge}
-                </span>
-              ) : null}
             </Link>
           );
         })}
@@ -58,14 +64,25 @@ export function Sidebar() {
 
       <div className="bg-tinta-900 mt-auto flex items-center gap-2.5 rounded-[10px] p-2.5">
         <div className="bg-marca-400 text-marca-700 flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
-          CA
+          {usuario.iniciales}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-[12.5px] font-semibold text-white">
-            Cristhian A.
+            {usuario.nombre}
           </div>
-          <div className="text-[10px] text-white/50">Administrador</div>
+          <div className="text-[10px] text-white/50">
+            {ROL_LEGIBLE[usuario.rol] ?? usuario.rol}
+          </div>
         </div>
+        <form action={logout}>
+          <button
+            type="submit"
+            title="Cerrar sesión"
+            className="shrink-0 text-white/50 hover:text-white"
+          >
+            <IconLogout size={16} />
+          </button>
+        </form>
       </div>
     </aside>
   );
