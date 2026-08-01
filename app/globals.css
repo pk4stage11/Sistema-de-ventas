@@ -39,6 +39,16 @@
   --color-form-badge-bg: #ededf7;
   --color-form-badge-texto: #3c3489;
 
+  /* Estado de unidad (Catálogo) y de visita (Agenda) */
+  --color-disponible-bg: #eaf7ee;
+  --color-disponible-texto: #16803c;
+  --color-reservado-bg: #fef3e2;
+  --color-reservado-texto: #b45309;
+  --color-vendido-bg: #f0f0ee;
+  --color-vendido-texto: #555555;
+  --color-error-bg: #fee2e2;
+  --color-error-texto: #b91c1c;
+
   --color-exito: #16a34a;
   --color-texto: #0e0e0e;
   --color-texto-sutil: #777777;

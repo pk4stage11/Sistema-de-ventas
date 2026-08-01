@@ -215,3 +215,27 @@ migrar).
   navegador no estaba visible en el cliente del usuario; se verificó por
   accesibilidad, texto renderizado, red y consola) y revisar el
   comportamiento responsive del sidebar en móvil, que todavía no colapsa.
+- **Catálogo y Agenda (2026-08-01), mismo criterio.** `app/(app)/catalogo/`
+  replica `08-admin-propiedades.html`, adaptado al esquema real (`units` +
+  `projects` en vez del modelo "propiedad" plana del mockup: se quitó la
+  columna Venta/Alquiler, que no aplica — este es un proyecto de desarrollo
+  vendiendo unidades propias, no un listado mixto de venta/alquiler de
+  terceros — y se agregó Piso/m² que sí importan acá). Los chips de estado
+  (`disponible`/`reservado`/`vendido`) mapean 1:1 al `estado` real de
+  `units`. El buscador y los filtros sí son interactivos (no placeholders
+  visuales), a diferencia del mockup estático.
+
+  `app/(app)/agenda/` **no tiene mockup de referencia** — la pantalla es
+  nueva de esta plataforma (agendamiento con Google Calendar), no existía
+  en el sitio InteresArte original. Se diseñó a mano siguiendo el mismo
+  sistema visual: lista de visitas agrupada por fecha, con badge de
+  `sync_status` (solo visible cuando _no_ está sincronizado — un error se
+  ve en rojo, "sincronizando" en ámbar) y acciones de asistencia
+  (asistió/no asistió) cuando la visita sigue pendiente. Se agregó un
+  color `error` (rojo) nuevo a `components/ui/badge.tsx`, que no existía
+  hasta ahora porque ninguna pantalla anterior necesitaba señalar un
+  fallo.
+
+  Ambas se verificaron en un navegador real esta vez (con el dev server
+  corriendo): sin errores de consola, filtros y buscador probados
+  interactivamente con clics reales, no solo lectura de accesibilidad.

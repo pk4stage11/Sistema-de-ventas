@@ -51,9 +51,17 @@ export default function Home() {
       </section>
 
       <p className="text-texto-tenue mt-8 text-xs">
-        Vista previa de la bandeja:{' '}
+        Vistas previas (datos de muestra):{' '}
         <a href="/inbox" className="text-marca-600 underline underline-offset-2">
           /inbox
+        </a>
+        {' · '}
+        <a href="/catalogo" className="text-marca-600 underline underline-offset-2">
+          /catalogo
+        </a>
+        {' · '}
+        <a href="/agenda" className="text-marca-600 underline underline-offset-2">
+          /agenda
         </a>
       </p>
     </main>
