@@ -23,10 +23,16 @@ const anthropicSchema = z.object({
   ANTHROPIC_API_KEY: z.string().startsWith('sk-'),
 });
 
-// Meta (Fases 2 y 5)
-const metaSchema = z.object({
+// Meta — verificación del webhook (Fase 2): lo mínimo para recibir mensajes.
+const metaWebhookSchema = z.object({
   META_APP_SECRET: z.string().min(1),
   META_WEBHOOK_VERIFY_TOKEN: z.string().min(1),
+});
+
+// Meta — envío saliente por WhatsApp (Fase 4 en adelante). Separado del
+// anterior a propósito: el webhook de ingesta no necesita estas credenciales
+// para funcionar, y exigirlas juntas rompía las pruebas locales de Fase 2.
+const whatsappSendSchema = z.object({
   WHATSAPP_PHONE_NUMBER_ID: z.string().min(1),
   WHATSAPP_ACCESS_TOKEN: z.string().min(1),
 });
@@ -50,7 +56,8 @@ const cronSchema = z.object({
 export type EnvPublic = z.infer<typeof publicSchema>;
 export type EnvSupabaseServer = z.infer<typeof supabaseServerSchema>;
 export type EnvAnthropic = z.infer<typeof anthropicSchema>;
-export type EnvMeta = z.infer<typeof metaSchema>;
+export type EnvMetaWebhook = z.infer<typeof metaWebhookSchema>;
+export type EnvWhatsappSend = z.infer<typeof whatsappSendSchema>;
 export type EnvGoogleCalendar = z.infer<typeof googleCalendarSchema>;
 export type EnvCron = z.infer<typeof cronSchema>;
 
@@ -95,10 +102,16 @@ export function envAnthropic(): EnvAnthropic {
   return parsear(anthropicSchema, process.env);
 }
 
-/** Credenciales de Meta (WhatsApp Cloud API / Messenger / Instagram). */
-export function envMeta(): EnvMeta {
-  asegurarServidor('envMeta');
-  return parsear(metaSchema, process.env);
+/** Credenciales para verificar webhooks de Meta (firma + hub.challenge). */
+export function envMetaWebhook(): EnvMetaWebhook {
+  asegurarServidor('envMetaWebhook');
+  return parsear(metaWebhookSchema, process.env);
+}
+
+/** Credenciales para enviar mensajes por WhatsApp Cloud API. */
+export function envWhatsappSend(): EnvWhatsappSend {
+  asegurarServidor('envWhatsappSend');
+  return parsear(whatsappSendSchema, process.env);
 }
 
 /** Credenciales de la cuenta de Google Calendar de la empresa. */

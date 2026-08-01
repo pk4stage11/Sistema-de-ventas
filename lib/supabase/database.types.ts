@@ -672,6 +672,11 @@ export interface Database {
         Relationships: [];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      dequeue_jobs: {
+        Args: { p_lote?: number };
+        Returns: Database['public']['Tables']['job_queue']['Row'][];
+      };
+    };
   };
 }

@@ -239,3 +239,80 @@ migrar).
   Ambas se verificaron en un navegador real esta vez (con el dev server
   corriendo): sin errores de consola, filtros y buscador probados
   interactivamente con clics reales, no solo lectura de accesibilidad.
+
+## Fase 2 — Notas de implementación
+
+- **El webhook de WhatsApp encola; no ingiere en línea.** El diseño
+  original de esta fase hacía todo el trabajo (contacto, conversación,
+  mensaje) dentro del propio handler del webhook. Se cambió: el `POST` de
+  `/api/webhooks/whatsapp` solo verifica la firma, normaliza y hace un
+  único `INSERT` en `job_queue`, después responde `200`. Motivo: Meta
+  reintenta el webhook si tarda o no responde 200 — minimizar el trabajo
+  antes de responder importa de verdad, no es prematuro. El endpoint de
+  landing (`/api/leads/inbound`), en cambio, **sí ingiere sincrónico**
+  (llama `ingestInboundMessage` directo, sin pasar por la cola): el
+  volumen es bajo, no hay un sistema externo reintentando agresivamente, y
+  necesita el `contact_id` de inmediato para registrar el consentimiento
+  (Ley 29733) en la misma request.
+- **`dequeue_jobs(p_lote)` — función de Postgres nueva** (migración
+  `20260801010000`). PostgREST no expone `SELECT ... FOR UPDATE SKIP
+LOCKED` desde el cliente (cada request de supabase-js es su propia
+  transacción sin control de locking) — sin esta función, dos
+  invocaciones concurrentes del drenador tomarían el mismo job. Se llama
+  vía `.rpc('dequeue_jobs', ...)`, con permiso de ejecución solo para
+  `service_role`.
+- **El drenador (`lib/queue/drain.ts`, `/api/cron/drain`) se construyó en
+  esta fase, no en la Fase 4 como sugería el plan original.** Sin él,
+  "ingesta" no era demostrable — los mensajes quedaban como filas inertes
+  en `job_queue`, nunca se volvían contactos/conversaciones/mensajes
+  reales. Hoy el drenador solo ingiere; en la Fase 4 se extiende para
+  además invocar al agente después de ingerir, sobre la misma
+  infraestructura (reintentos con backoff exponencial, tope 30 min, hasta
+  `max_intentos`).
+- **`after()` de `next/server`** dispara el drenado inmediatamente después
+  de responder al webhook (el "disparo inmediato" que menciona el plan,
+  además del minuto de Vercel Cron). No se probó en un test unitario
+  porque `after()` necesita el contexto de request real de Next —
+  solo se ejecuta cuando `mensajes.length > 0`, así que los tests de firma
+  inválida (que nunca llegan a esa línea) no lo tocan. El camino feliz
+  completo se verificó con `scripts/simulate-webhook.ts` contra
+  `npm run dev` real.
+- **`envMeta()` se dividió en `envMetaWebhook()` y `envWhatsappSend()`**,
+  mismo motivo que la división de `envServer()` en la Fase 1: el webhook
+  de ingesta no necesita `WHATSAPP_PHONE_NUMBER_ID`/`WHATSAPP_ACCESS_TOKEN`
+  (esas son para _enviar_, Fase 4 en adelante) y exigirlas juntas rompía
+  poder probar el webhook localmente sin tener todavía una app de Meta
+  real.
+- **Credenciales de Meta para desarrollo local son generadas, no reales.**
+  `META_APP_SECRET` y `META_WEBHOOK_VERIFY_TOKEN` en `.env.local` son
+  valores aleatorios propios (no emitidos por Meta) — funcionan porque
+  `scripts/simulate-webhook.ts` firma con el mismo secreto. Cuando haya
+  una app de Meta real (Fase 7, checklist de Meta Business), estos se
+  reemplazan por los que Meta asigna.
+- **Honeypot responde 200 igual.** `esEnvioHoneypot()` no rechaza con un
+  código de error — devolver 400/403 le confirmaría a un bot de envío
+  automático que fue detectado. Se responde `{ok:true}` y simplemente no
+  se procesa nada. Verificado manualmente: el contacto del honeypot nunca
+  se creó en la base.
+- **Rate limiting en memoria, no distribuido** (`lib/security/rate-limit.ts`):
+  documentado como limitación conocida — en Vercel con varias instancias
+  concurrentes el límite es "N por IP por instancia", no global. Suficiente
+  para el volumen actual (bootstrapped); Upstash Redis es el siguiente
+  paso si hace falta. Se verificó manualmente con 6 requests seguidos
+  desde la misma IP: el 6to (de hecho, ya el 2do — las pruebas anteriores
+  en la misma sesión del servidor habían consumido parte de la cuota,
+  porque curl desde localhost no manda `x-forwarded-for` y todas mis
+  pruebas comparten la clave `landing:desconocida`) devolvió 429.
+  Comportamiento correcto, no un bug — en producción (Vercel) esa cabecera
+  siempre viene poblada.
+- **Verificación end-to-end real (2026-08-01):** contra el proyecto
+  Supabase real y `npm run dev` real, no solo tests: `simulate-webhook.ts`
+  firmado → 200 → `after()` drena → contacto, conversación y mensaje
+  aparecen en la base con el texto correcto. Endpoint de landing probado
+  con envío válido (200, consentimiento registrado), honeypot (200, nada
+  creado), sin consentimiento (400), sin contacto (400), rate limit (429).
+  GET de verificación del webhook (200 con el challenge correcto, 403 con
+  token incorrecto) y `/api/cron/drain` (401 sin `CRON_SECRET`, 200 con
+  el correcto) probados igual. 26 tests unitarios + 8 tests de `test:db`
+  (5 de RLS de la Fase 1 + 3 nuevos de idempotencia de ingesta), todos
+  pasando.

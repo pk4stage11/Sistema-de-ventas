@@ -1,0 +1,37 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "51987654321",
+              "phone_number_id": "109876543210"
+            },
+            "contacts": [
+              { "profile": { "name": "Jorge Paredes" }, "wa_id": "51955222333" }
+            ],
+            "messages": [
+              {
+                "from": "51955222333",
+                "id": "wamid.imagen123",
+                "timestamp": "1785500100",
+                "type": "image",
+                "image": {
+                  "id": "media-id-abc123",
+                  "mime_type": "image/jpeg",
+                  "sha256": "abc123hash",
+                  "caption": "¿Tienen algo parecido a esto?"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
