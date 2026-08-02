@@ -391,3 +391,85 @@ LOCKED` desde el cliente (cada request de supabase-js es su propia
   WhatsApp calculado correctamente, panel del lead mostrando "todavía no
   lo calificó el agente de IA" (correcto — el agente no existe hasta la
   Fase 4), y logout. Sin errores de consola en ningún paso.
+
+## Fase 4 — Notas de implementación
+
+**Estado real: código completo y verificado donde se pudo, pero el loop
+completo del agente (llamar a Claude de verdad) sigue sin probarse
+porque `.env.local` todavía tiene el `ANTHROPIC_API_KEY` de ejemplo.**
+Se verificó explícitamente que el sistema se degrada bien ante eso — ver
+más abajo — en vez de asumirlo.
+
+- **`guardar_calificacion` — novena tool, no estaba en la lista del
+  plan.** Las 8 tools originales no incluyen ninguna que escriba en
+  `lead_qualification`; sin ella, la "calificación obligatoria" que pide
+  el propio system prompt no tendría dónde persistir. Se agregó como
+  puente: guarda/actualiza los campos a medida que llegan y avanza
+  `leads.estado` de `nuevo` → `calificando` → `calificado` cuando los
+  campos clave (tipo de inmueble, distrito, presupuesto máximo, forma de
+  pago) están completos.
+- **RAG simplificado a propósito** (decisión del usuario, 2026-08-01):
+  `consultar_catalogo_rag` usa `ILIKE` sobre las fichas de proyecto, no
+  embeddings — no hay proveedor de embeddings configurado (Voyage AI u
+  otro) y el usuario pidió no gastar esa credencial todavía ("es solo de
+  prueba"). La tool tiene la misma interfaz que tendría con embeddings
+  reales, así que migrarla más adelante no cambia nada del lado del
+  agente.
+- **`consultar_disponibilidad` y `agendar_visita` (Fase 4) todavía no
+  hablan con Google Calendar** — cruzan `availability_rules` con
+  `visits` directo. La lógica de slots vive en `lib/calendar/slots.ts`
+  (no en `lib/agent/tools/`) exactamente para que la Fase 4.5 la
+  reutilice sin tocar su firma cuando sume el cruce con `freebusy` de
+  Google. `agendar_visita` sí usa la máquina de estados
+  (`asegurarTransicionValida`) y confía en el exclusion constraint de
+  `visits` (Fase 1) como red de seguridad real contra doble-booking, no
+  solo en la lógica de la tool.
+- **Máquina de estados: throw, no `{error}`, para violaciones de
+  invariante.** `agendar_visita` y `crear_solicitud_reserva` llaman
+  `asegurarTransicionValida()`, que lanza. Las demás tools devuelven
+  `{ error: '...' }` para casos de negocio esperables (unidad no
+  encontrada, honeypot, cuota inicial inválida). La diferencia es
+  intencional: un salto de estado inválido es un error de programación o
+  de datos, no una rama normal del negocio. No importa para Claude — el
+  orquestador (`lib/agent/run.ts`) captura cualquier excepción de
+  cualquier tool y se la devuelve como `tool_result` con `is_error:true`
+  de todos modos, así que el modelo ve un error utilizable en ambos
+  casos.
+- **`z.toJSONSchema()` nativo de Zod 4** para las definiciones de tools
+  que espera la API de Anthropic — no hizo falta agregar
+  `zod-to-json-schema` como dependencia aparte.
+- **Cada tool necesitó un tipo de salida explícito** (`ToolDefinition<Input, Output>`,
+  no solo `<Input>`): sin él, `execute()` devuelve `unknown` y cualquier
+  código que use el resultado (tests, en particular) no compila. Mismo
+  principio que ya había aparecido con los embeds de PostgREST — los
+  genéricos por defecto de TypeScript no regalan nada.
+- **El drenador (`lib/queue/drain.ts`) separa el resultado de la
+  _ingesta_ del resultado del _agente_.** Antes de este ajuste, si
+  `runAgentTurn` lanzaba, todo el job (incluida la ingesta ya exitosa)
+  se reintentaba — y como `ingestInboundMessage` es idempotente, el
+  reintento detectaba un duplicado y **nunca volvía a intentar el
+  agente**, dejando el mensaje huérfano para siempre. Ahora el job se
+  marca `completado` apenas la ingesta está a salvo; un fallo del agente
+  después de eso solo se loguea. Verificado en caliente: con la
+  `ANTHROPIC_API_KEY` de ejemplo, la llamada real a Anthropic devuelve
+  401, el error queda logueado (`El agente falló para la conversación
+...`), y el mensaje entrante quedó guardado igual con el job en
+  `completado`, `intentos: 0` — exactamente el comportamiento buscado.
+- **El agente solo responde por WhatsApp por ahora**
+  (`correrAgenteYResponder` corta si el canal no es `whatsapp`) — un
+  envío de landing no tiene un canal vivo al que contestarle en
+  automático.
+- **Respeta la ventana de 24h de WhatsApp antes de enviar**: si está
+  cerrada, la respuesta del agente se guarda igual (visible en la
+  bandeja) pero no se intenta enviar — todavía no hay gestión de
+  plantillas (Fase 5) para ese caso.
+- **`scripts/seed.ts` ahora también crea `availability_rules`** (lunes a
+  viernes, 9am-6pm hora de Lima) — sin esto, `consultar_disponibilidad`
+  no tendría nada que ofrecer en la organización real.
+- **Pendiente real, no una carencia oculta:** falta una
+  `ANTHROPIC_API_KEY` real para probar el loop completo (Claude
+  respondiendo con tool use de verdad) y `WHATSAPP_ACCESS_TOKEN` /
+  `WHATSAPP_PHONE_NUMBER_ID` reales para que el envío de vuelta por
+  WhatsApp funcione — hoy ambos fallan de forma controlada y quedan
+  logueados, no rompen nada, pero no hay una conversación real de punta a
+  punta todavía.

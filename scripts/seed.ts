@@ -132,6 +132,35 @@ async function obtenerOCrearAdmin(
   console.log(`  contraseña: ${password}  (guárdala — no se vuelve a mostrar)`);
 }
 
+/**
+ * Horario de atención por defecto (lunes a viernes, 9am-6pm hora de Lima)
+ * para que `consultar_disponibilidad` (Fase 4) tenga algo que ofrecer.
+ */
+async function obtenerOCrearHorarioAtencion(
+  db: ReturnType<typeof supabaseAdmin>,
+  orgId: string,
+): Promise<void> {
+  const { data: existentes } = await db
+    .from('availability_rules')
+    .select('id')
+    .eq('org_id', orgId)
+    .limit(1);
+  if (existentes && existentes.length > 0) return;
+
+  const reglas = [1, 2, 3, 4, 5].map((diaSemana) => ({
+    org_id: orgId,
+    dia_semana: diaSemana,
+    hora_inicio: '09:00:00',
+    hora_fin: '18:00:00',
+    duracion_visita_minutos: 45,
+    buffer_minutos: 15,
+  }));
+
+  const { error } = await db.from('availability_rules').insert(reglas);
+  if (error) throw error;
+  console.log('Horario de atención: lunes a viernes, 9am-6pm (hora de Lima).');
+}
+
 function generarUnidades(orgId: string, projectId: string): UnidadInsert[] {
   const unidades: UnidadInsert[] = [];
 
@@ -173,6 +202,7 @@ async function main() {
   console.log(`  id = ${projectId}`);
 
   await obtenerOCrearAdmin(db, orgId);
+  await obtenerOCrearHorarioAtencion(db, orgId);
 
   const unidades = generarUnidades(orgId, projectId);
   const { data: unidadesGuardadas, error: errorUnidades } = await db
